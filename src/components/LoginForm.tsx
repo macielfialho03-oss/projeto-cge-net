@@ -1,0 +1,135 @@
+import React from "react";
+import { useForm } from "react-hook-form";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { useAdmin } from "@/contexts/AdminContext";
+
+type FormValues = { cpf: string; password: string };
+
+interface LoginFormProps {
+  /** quando true, ajusta textos e links para a área administrativa */
+  isAdmin?: boolean;
+  /** opcional: callback para permitir comportamento customizado no submit */
+  onSubmit?: (data: FormValues) => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ isAdmin = false, onSubmit }) => {
+  const { loginLocal } = useAdmin();
+  const form = useForm<FormValues>({ defaultValues: { cpf: "", password: "" } });
+
+  const handleSubmit = (values: FormValues) => {
+    // se quiser delegar pra quem chamou
+    if (onSubmit) {
+      onSubmit(values);
+      return;
+    }
+
+    // fluxo padrão demo: valida campos e autentica localmente
+    if (!values.cpf || !values.password) {
+      toast.error("Por favor preencha todos os campos.", {
+        description: "CPF e senha são obrigatórios.",
+      });
+      return;
+    }
+
+    // aqui no futuro você troca por chamada de API
+    loginLocal({
+      name: isAdmin ? "Administrador" : "Usuário",
+      cpf: values.cpf,
+      isAdmin,
+    });
+
+    toast.success("Login realizado com sucesso!", {
+      description: isAdmin
+        ? "Você agora tem acesso às funções administrativas."
+        : "Bem-vindo!",
+    });
+    // a navegação pós-login fica a cargo da página (AdminLogin/Login) usando onSubmit,
+    // ou você pode navegar aqui se preferir — mantive sem navigate pra reutilização máxima
+  };
+
+  const {
+    register,
+    handleSubmit: rhfSubmit,
+    formState: { errors },
+  } = form;
+
+  return (
+    <Card className="w-full max-w-md shadow-lg">
+      <CardHeader className="bg-gov-blue text-white rounded-t-lg">
+        <CardTitle className="text-center text-2xl">
+          {isAdmin ? "Acesso Administrativo" : "Área Restrita"}
+        </CardTitle>
+        <CardDescription className="text-white/80 text-center">
+          Acesse o sistema com suas credenciais
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="pt-6">
+        <form onSubmit={rhfSubmit(handleSubmit)}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="cpf">CPF ou Usuário</Label>
+              <Input
+                id="cpf"
+                placeholder="Digite seu CPF ou usuário"
+                type="text"
+                {...register("cpf", { required: "Informe seu CPF/usuário" })}
+              />
+              {errors.cpf && (
+                <p className="text-sm text-destructive">{errors.cpf.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label htmlFor="password">Senha</Label>
+                <Link
+                  to={isAdmin ? "/admin/recuperar-senha" : "/recuperar-senha"}
+                  className="text-sm text-gov-blue hover:underline"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                placeholder="Digite sua senha"
+                type="password"
+                {...register("password", { required: "Informe sua senha" })}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full mt-6 bg-gov-blue hover:bg-gov-blue-dark">
+            Entrar
+          </Button>
+        </form>
+      </CardContent>
+
+      <CardFooter className="flex flex-col space-y-4 text-center">
+        {!isAdmin && (
+          <div className="text-sm text-muted-foreground">
+            Não tem cadastro?{" "}
+            <Link to="/registrar" className="text-gov-blue hover:underline">
+              Cadastre-se
+            </Link>
+          </div>
+        )}
+        <div>
+          <Link to="/suporte" className="text-sm text-gov-blue hover:underline block">
+            Suporte Técnico
+          </Link>
+        </div>
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default LoginForm;
